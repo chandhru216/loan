@@ -17,21 +17,10 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, postman)
-    if (!origin) return callback(null, true);
-    
-    const isAllowed = allowedOrigins.includes(origin) || 
-                      origin.endsWith('.vercel.app');
-                      
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true,
   credentials: true
 }));
+app.options('*', cors());
 app.use(express.json());
 
 // Routes
@@ -49,15 +38,18 @@ app.get('/api/health', (req, res) => {
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
-  // Set static folder
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+  const frontendDist = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendDist));
 
-  // Any route that doesn't match API routes should load index.html
   app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
+    const indexPath = path.resolve(frontendDist, 'index.html');
+    if (require('fs').existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.json({ status: 'OK', message: 'Loan Tracker API is running' });
+    }
   });
 }
-
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -72,26 +64,38 @@ app.listen(PORT, () => {
 });
 
 // Connect to MongoDB
-const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/loantracker';
-mongoose.connect(mongoUri, {
-  serverSelectionTimeoutMS: 10000,
-})
-  .then(() => {
-    console.log(`✅ MongoDB connected successfully to ${mongoUri}`);
-    // Cron job: Check EMI reminders daily at 9 AM
-    cron.schedule('0 9 * * *', async () => {
-      const { checkEmiReminders } = require('./controllers/notificationController');
-      await checkEmiReminders();
-    });
-  })
-  .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message || err);
-    if (err.code === 'ENOTFOUND' || (err.message && err.message.includes('ENOTFOUND'))) {
-      console.error('💡 Diagnostic Tip: ENOTFOUND means the MongoDB host DNS lookup failed.');
-      console.error('   1. Check MONGO_URI in Render dashboard for typos in cluster domain name.');
-      console.error('   2. URL-encode special characters in password (e.g., @ -> %40).');
-      console.error('   3. Ensure MongoDB Atlas Network Access permits 0.0.0.0/0.');
+const connectDB = async () => {
+  let uri = process.env.MONGO_URI;
+  if (uri) {
+    try {
+      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+      console.log(`✅ MongoDB connected successfully to ${uri}`);
+      return;
+    } catch (err) {
+      console.error(`⚠️ Cloud MONGO_URI connection failed: ${err.message}. Falling back to in-memory DB...`);
     }
+  }
+
+  try {
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongoServer = await MongoMemoryServer.create();
+    uri = mongoServer.getUri();
+    await mongoose.connect(uri);
+    console.log(`✅ MongoDB Memory Server connected successfully at ${uri}`);
+
+    const seed = require('./seed');
+    await seed();
+  } catch (err) {
+    console.error('❌ Failed to start MongoDB database:', err.message);
+  }
+};
+
+connectDB().then(() => {
+  cron.schedule('0 9 * * *', async () => {
+    const { checkEmiReminders } = require('./controllers/notificationController');
+    await checkEmiReminders();
   });
+});
 
 module.exports = app;
+

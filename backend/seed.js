@@ -121,7 +121,14 @@ const seed = async () => {
 
   console.log('✅ Seed data inserted successfully!');
   console.log('📧 Demo login: demo@loantracker.com / demo1234');
-  mongoose.disconnect();
 };
 
-seed().catch(console.error);
+if (require.main === module) {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/loantracker';
+  mongoose.connect(mongoUri).then(async () => {
+    await seed();
+    mongoose.disconnect();
+  }).catch(console.error);
+}
+
+module.exports = seed;
