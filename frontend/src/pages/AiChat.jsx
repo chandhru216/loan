@@ -17,18 +17,69 @@ const TypingDots = () => (
   </div>
 );
 
-// Simple markdown-like renderer for AI responses
+// Markdown-like renderer for AI responses that parses **bold** text and removes raw asterisks
+const parseInlineMarkdown = (text) => {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    return part.replace(/\*\*/g, '');
+  });
+};
+
 const renderMessage = (text) => {
+  if (!text) return null;
   const lines = text.split('\n');
   return lines.map((line, i) => {
-    if (line.startsWith('• ') || line.startsWith('- ')) {
-      return <li key={i}>{line.slice(2)}</li>;
+    const trimmed = line.trim();
+    if (!trimmed) return <br key={i} />;
+
+    // Headers
+    if (trimmed.startsWith('### ')) {
+      return (
+        <h3 key={i} style={{ marginTop: 10, marginBottom: 8, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text1)' }}>
+          {parseInlineMarkdown(trimmed.slice(4))}
+        </h3>
+      );
     }
-    if (line.startsWith('**') && line.endsWith('**')) {
-      return <strong key={i} style={{ display: 'block', marginTop: 6 }}>{line.slice(2, -2)}</strong>;
+    if (trimmed.startsWith('## ')) {
+      return (
+        <h2 key={i} style={{ marginTop: 12, marginBottom: 8, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text1)' }}>
+          {parseInlineMarkdown(trimmed.slice(3))}
+        </h2>
+      );
     }
-    if (line === '') return <br key={i} />;
-    return <p key={i} style={{ margin: '3px 0' }}>{line}</p>;
+
+    // Bullet lists
+    if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const listContent = trimmed.replace(/^[•\-\*]\s+/, '');
+      return (
+        <li key={i} style={{ marginBottom: 4, marginLeft: 16, listStyleType: 'disc' }}>
+          {parseInlineMarkdown(listContent)}
+        </li>
+      );
+    }
+
+    // Numbered lists
+    if (/^\d+\.\s+/.test(trimmed)) {
+      const match = trimmed.match(/^(\d+\.)\s+(.*)/);
+      if (match) {
+        return (
+          <p key={i} style={{ margin: '4px 0 4px 8px' }}>
+            <strong style={{ color: 'var(--accent-light, #a78bfa)' }}>{match[1]}</strong> {parseInlineMarkdown(match[2])}
+          </p>
+        );
+      }
+    }
+
+    // Paragraph
+    return (
+      <p key={i} style={{ margin: '4px 0' }}>
+        {parseInlineMarkdown(line)}
+      </p>
+    );
   });
 };
 

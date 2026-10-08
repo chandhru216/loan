@@ -27,7 +27,7 @@ function generateSmartAdvice(userQuery, { loans, loanDetails, totalLoanAmount, t
     }
     advice += `2. **Partial Prepayment**: Making lump sum prepayments towards principal lowers your outstanding principal, allowing your lender to recalculate a lower EMI.\n`;
     advice += `3. **Tenure Extension**: Negotiate with your lender (${highestInterestLoan?.lender || 'your bank'}) to extend the repayment tenure, spreading out monthly obligations.\n\n`;
-    advice += `*Current Total Utilization:* **${overallUtil}%** across your portfolio. Reducing high-interest debt first saves maximum money!`;
+    advice += `Current Total Utilization: **${overallUtil}%** across your portfolio. Reducing high-interest debt first saves maximum money!`;
     return advice;
   }
 
