@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://loan-track-backend.onrender.com/api/:path*"
+      "destination": "https://loan-track-backend-api.onrender.com/api/:path*"
     }
   ],
   "routes": [
