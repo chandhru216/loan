@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
 const Loan = require('../models/Loan');
 const Notification = require('../models/Notification');
@@ -158,7 +159,9 @@ exports.getExpenseSummary = async (req, res) => {
   try {
     const { loanId } = req.query;
     const match = { user: req.user._id };
-    if (loanId) match.loan = require('mongoose').Types.ObjectId(loanId);
+    if (loanId && mongoose.Types.ObjectId.isValid(loanId)) {
+      match.loan = new mongoose.Types.ObjectId(loanId);
+    }
 
     const summary = await Expense.aggregate([
       { $match: match },

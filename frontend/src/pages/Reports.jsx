@@ -27,9 +27,17 @@ export default function Reports() {
   useEffect(() => { if (selectedLoan) fetchLoanReport(selectedLoan); else setReport(null); }, [selectedLoan]);
 
   const fetchLoans = async () => {
-    const res = await api.get('/loans');
-    setLoans(res.data.loans);
-    if (res.data.loans.length > 0) setSelectedLoan(res.data.loans[0]._id);
+    try {
+      const res = await api.get('/loans');
+      const loanList = res.data?.loans || [];
+      setLoans(loanList);
+      if (loanList.length > 0) setSelectedLoan(loanList[0]._id);
+      else { setSelectedLoan(''); setReport(null); }
+    } catch {
+      setLoans([]);
+      setSelectedLoan('');
+      setReport(null);
+    }
   };
 
   const fetchDashboard = async () => {

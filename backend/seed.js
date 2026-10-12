@@ -8,15 +8,18 @@ const Expense = require('./models/Expense');
 const Notification = require('./models/Notification');
 
 const seed = async () => {
-  const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/loantracker';
-  await mongoose.connect(mongoUri);
-  console.log(`Connected to MongoDB at ${mongoUri}`);
+  if (mongoose.connection.readyState !== 1) {
+    const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/loantracker';
+    await mongoose.connect(mongoUri);
+    console.log(`Connected to MongoDB at ${mongoUri}`);
+  }
 
-  // Clear existing data
-  await User.deleteMany({});
-  await Loan.deleteMany({});
-  await Expense.deleteMany({});
-  await Notification.deleteMany({});
+  // Check if demo user already exists
+  const existing = await User.findOne({ email: 'demo@loantracker.com' });
+  if (existing) {
+    console.log('Demo user already exists, skipping seed.');
+    return;
+  }
 
   // Create demo user
   const user = await User.create({

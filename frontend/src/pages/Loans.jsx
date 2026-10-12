@@ -23,7 +23,7 @@ export default function Loans() {
   const fetchLoans = async () => {
     try {
       const res = await api.get('/loans');
-      setLoans(res.data.loans);
+      setLoans(res.data?.loans || []);
     } catch { toast.error('Failed to load loans'); }
     finally { setLoading(false); }
   };
@@ -61,13 +61,20 @@ export default function Loans() {
   };
 
   const handleDelete = async () => {
+    if (!selected) return;
     setSaving(true);
+    const idToDelete = selected._id;
     try {
-      await api.delete(`/loans/${selected._id}`);
+      await api.delete(`/loans/${idToDelete}`);
       toast.success('Loan deleted');
-      fetchLoans(); closeModal();
-    } catch { toast.error('Delete failed'); }
-    finally { setSaving(false); }
+      setLoans(prev => prev.filter(l => l._id !== idToDelete));
+      closeModal();
+      fetchLoans();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Delete failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const set = k => e => setForm({ ...form, [k]: e.target.value });

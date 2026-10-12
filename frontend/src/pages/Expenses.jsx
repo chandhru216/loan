@@ -25,8 +25,12 @@ export default function Expenses() {
   useEffect(() => { fetchExpenses(); }, [filters]);
 
   const fetchLoans = async () => {
-    const res = await api.get('/loans');
-    setLoans(res.data.loans);
+    try {
+      const res = await api.get('/loans');
+      setLoans(res.data?.loans || []);
+    } catch {
+      setLoans([]);
+    }
   };
 
   const fetchExpenses = async () => {
@@ -42,6 +46,10 @@ export default function Expenses() {
   };
 
   const openAdd = () => {
+    if (!loans || loans.length === 0) {
+      toast.error('Please create a loan first before adding expenses');
+      return;
+    }
     setForm(EMPTY_FORM);
     setSelectedLoanInfo(null);
     setAmountError('');
